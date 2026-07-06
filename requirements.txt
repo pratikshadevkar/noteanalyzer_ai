@@ -1,7 +1,7 @@
 Flask==3.0.2
 Flask-CORS==4.0.0
 PyMuPDF==1.23.26
-Pillow==10.2.0
+Pillow==11.3.0
 numpy==1.26.4
 easyocr==1.7.1
 wordfreq==3.1.1
