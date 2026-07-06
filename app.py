@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
-import fitz  # PyMuPDF
+import fitz
 from PIL import Image
 import os
 import base64
@@ -10,23 +10,18 @@ import numpy as np
 import easyocr
 import uuid
 from wordfreq import zipf_frequency
-from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
-from sentence_transformers import SentenceTransformer
+from sklearn.feature_extraction.text import TfidfVectorizer
 
 app = Flask(__name__)
 CORS(app)
 
 SESSION_CACHE = {}
-_model_instance = None
+
 _reader_instance = None
 
 def get_sentence_model():
-    global _model_instance
-    if _model_instance is None:
-        print("🚀 [Lazy Load] Initializing SentenceTransformer...")
-        _model_instance = SentenceTransformer("all-MiniLM-L6-v2")
-    return _model_instance
+   
 
 def get_ocr_reader():
     global _reader_instance
@@ -126,7 +121,7 @@ def init_session():
         pdf_clean = clean_text_completely(pdf_text_raw)
         pdf_word_count = len(pdf_clean.split()) # Calculated securely from cleaned data array
         
-        pdf_embedding = get_sentence_model().encode(pdf_clean)
+       
         pdf_kw = extract_keywords(pdf_clean)
         pdf_sentences = [s.strip() for s in re.split(r'[.!?\n]+', pdf_text_raw) if len(s.strip()) > 15]
 
@@ -135,7 +130,6 @@ def init_session():
             'pdf_text_raw': pdf_text_raw,
             'pdf_clean': pdf_clean,
             'pdf_word_count': pdf_word_count,
-            'pdf_embedding': pdf_embedding,
             'pdf_kw': pdf_kw,
             'pdf_sentences': pdf_sentences,
             'pdf_preview': pdf_preview
@@ -168,7 +162,6 @@ def analyze_notes():
         pdf_text_raw = cache['pdf_text_raw']
         pdf_clean = cache['pdf_clean']
         pdf_word_count = cache['pdf_word_count'] # Pulled accurately from session state cache
-        pdf_embedding = cache['pdf_embedding']
         pdf_kw = cache['pdf_kw']
         pdf_sentences = cache['pdf_sentences']
         
@@ -195,8 +188,15 @@ def analyze_notes():
         if not pdf_clean or not notes_clean:
             return jsonify({'error': 'No readable text identified.'}), 400
         
-        notes_embedding = get_sentence_model().encode(notes_clean)
-        semantic_similarity = cosine_similarity([pdf_embedding], [notes_embedding])[0][0] * 100
+        vectorizer = TfidfVectorizer()
+
+        tfidf_matrix = vectorizer.fit_transform([pdf_clean, notes_clean])
+
+        semantic_similarity = cosine_similarity(
+          tfidf_matrix[0:1],
+          tfidf_matrix[1:2]
+        )[0][0] * 100
+       
 
         notes_kw = extract_keywords(notes_clean)
         matched_set = set(pdf_kw).intersection(set(notes_kw))
