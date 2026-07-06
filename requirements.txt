@@ -1,0 +1,9 @@
+Flask==3.0.2
+Flask-CORS==4.0.0
+PyMuPDF==1.23.26
+Pillow==10.2.0
+numpy==1.26.4
+easyocr==1.7.1
+wordfreq==3.1.1
+scikit-learn==1.4.1.post1
+sentence-transformers==2.5.1

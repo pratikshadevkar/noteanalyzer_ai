@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NoteCheck AI — Handwritten Notes Accuracy Analyzer</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <div class="bg-circle bg1"></div>
+  <div class="bg-circle bg2"></div>
+  <div class="bg-circle bg3"></div>
+
+  <header>
+    <div class="container">
+      <div class="header-inner">
+        <div class="logo">
+          <div class="logo-icon">📝</div>
+          <div>
+            <div class="logo-text">NoteCheck AI</div>
+            <div class="logo-sub">Handwritten Notes Accuracy Analyzer</div>
+          </div>
+        </div>
+        <div class="header-actions">
+          <div class="badge" id="sessionStatus">🧠 AI Powered</div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="hero">
+      <h1>How Well Do Your Notes <span>Match the Material?</span></h1>
+      <p>Upload your study PDF and handwritten notes — get an instant AI accuracy score with detailed keyword and topic coverage analysis.</p>
+    </div>
+
+    <div class="config-panel">
+      <div class="config-title">⚙️ Analysis Configuration</div>
+      <div class="config-grid">
+        <div class="config-group">
+          <label for="extractionMode">AI Engine Mode</label>
+          <select id="extractionMode">
+            <option value="standard" selected>Standard (Fast OCR & Key-matching)</option>
+            <option value="deep">Deep Analysis (Semantic Text Alignment)</option>
+            <option value="precise">Precise (Mathematical & Technical Formulations)</option>
+          </select>
+        </div>
+        <div class="config-group checkbox-group">
+          <input type="checkbox" id="deepMatch" checked>
+          <label for="deepMatch">Enable Advanced Synonym Recognition</label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Active Lock Session Banner component -->
+    <div id="sessionBanner" style="display:none; background:rgba(16, 185, 129, 0.1); border:1px dashed var(--green); padding:16px; border-radius:12px; margin:20px 0; text-align:center;">
+       <span style="color:var(--green); font-weight:600;">🔒 Study PDF Session Locked!</span> You can continue scanning new images against this document. 
+       <button onclick="clearSession()" style="margin-left:15px; background:var(--surface2); border:1px solid var(--border); color:white; padding:4px 12px; border-radius:6px; cursor:pointer;">Change Reference PDF</button>
+    </div>
+
+    <div id="uploadSection">
+      <div class="upload-grid">
+        <!-- PDF Upload -->
+        <div class="upload-card" id="pdfCard">
+          <div class="card-header">
+            <div class="card-icon pdf-icon">📄</div>
+            <div>
+              <div class="card-title">Study Material PDF</div>
+              <div class="card-subtitle">Upload once to lock state cache</div>
+            </div>
+          </div>
+          <div class="drop-zone" id="pdfZone">
+            <input type="file" id="pdfInput" accept=".pdf" onchange="handlePdfUpload()"/>
+            <div class="drop-icon">📑</div>
+            <div class="drop-text"><strong>Click to upload</strong> or drag & drop</div>
+            <div class="drop-hint">PDF files only</div>
+          </div>
+          <div class="file-preview" id="pdfPreview">
+            <div class="file-thumb">📄</div>
+            <div class="file-info">
+              <div class="file-name" id="pdfName">—</div>
+              <div class="file-size" id="pdfSize">—</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Notes Upload -->
+        <div class="upload-card" id="notesCard">
+          <div class="card-header">
+            <div class="card-icon notes-icon">✍️</div>
+            <div>
+              <div class="card-title">Handwritten Notes</div>
+              <div class="card-subtitle">Scan multiple items instantly</div>
+            </div>
+          </div>
+          <div class="drop-zone" id="notesZone">
+            <input type="file" id="notesInput" accept=".pdf,.jpg,.jpeg,.png,.webp" onchange="handleNotesSelected()" />
+            <div class="drop-icon">🖊️</div>
+            <div class="drop-text"><strong>Click to select images</strong></div>
+            <div class="drop-hint">PDF, JPG, PNG, or WEBP</div>
+          </div>
+          <div class="file-preview" id="notesPreview">
+            <div class="file-thumb">✍️</div>
+            <div class="file-info">
+              <div class="file-name" id="notesName">—</div>
+              <div class="file-size" id="notesSize">—</div>
+            </div>
+            <button class="remove-btn" onclick="removeNotesFile()">✕</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="error-msg" id="errorMsg"></div>
+
+      <div class="analyze-section">
+        <button class="analyze-btn" id="analyzeBtn" onclick="analyzeNotes()" disabled>
+          ✨ Analyze Selected Note
+        </button>
+      </div>
+    </div>
+
+    <!-- Loading Screen -->
+    <div class="loading" id="loading">
+      <div class="spinner"></div>
+      <div class="loading-text" id="loadingText">Processing Session Vector Arrays...</div>
+      <div class="loading-sub">Caching Data Assets for Ultra Fast Response Time</div>
+    </div>
+
+    <!-- Results Overview Layout -->
+    <div id="results">
+      <div class="results-header">
+        <h2>📊 Analysis Complete</h2>
+      </div>
+
+      <div class="score-section">
+        <div class="score-ring-wrap">
+          <svg class="score-ring" viewBox="0 0 180 180">
+            <circle class="score-ring-bg" cx="90" cy="90" r="80"/>
+            <circle class="score-ring-fill" id="scoreRingFill" cx="90" cy="90" r="80"
+              stroke="url(#ringGrad)" stroke-dasharray="502" stroke-dashoffset="502"/>
+            <defs>
+              <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#6366f1"/>
+                <stop offset="100%" stop-color="#e02424"/>
+              </linearGradient>
+            </defs>
+          </svg>
+          <div class="score-center">
+            <div class="score-number" id="scoreNumber">0%</div>
+            <div class="score-label">Match Score</div>
+          </div>
+        </div>
+
+        <div class="score-info">
+          <div class="grade-badge" id="gradeBadge">—</div>
+          <div class="score-feedback" id="scoreFeedback">—</div>
+          <div class="score-stats">
+            <div class="stat-item">
+              <div class="stat-val" id="pdfWords">—</div>
+              <div class="stat-lbl">PDF Words</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-val" id="notesWords">—</div>
+              <div class="stat-lbl">Notes Words</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-val" id="matchedKwCount">—</div>
+              <div class="stat-lbl">Matched Keywords</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="metrics-grid">
+        <div class="metric-card m1">
+          <div class="metric-icon">🧠</div>
+          <div class="metric-val" id="tfidfScore">—</div>
+          <div class="metric-name">Semantic Similarity</div>
+          <div class="metric-bar-wrap"><div class="metric-bar" id="tfidfBar"></div></div>
+        </div>
+        <div class="metric-card m2">
+          <div class="metric-icon">🔑</div>
+          <div class="metric-val" id="kwScore">—</div>
+          <div class="metric-name">Keyword Coverage</div>
+          <div class="metric-bar-wrap"><div class="metric-bar" id="kwBar"></div></div>
+        </div>
+        <div class="metric-card m3">
+          <div class="metric-icon">📚</div>
+          <div class="metric-val" id="topicScore">—</div>
+          <div class="metric-name">Topic Coverage</div>
+          <div class="metric-bar-wrap"><div class="metric-bar" id="topicBar"></div></div>
+        </div>
+        <div class="metric-card m4">
+          <div class="metric-icon">🔡</div>
+          <div class="metric-val" id="seqScore">—</div>
+          <div class="metric-name">Sequence Match</div>
+          <div class="metric-bar-wrap"><div class="metric-bar" id="seqBar"></div></div>
+        </div>
+      </div>
+
+      <div class="two-col">
+        <div class="kw-card">
+          <h3>✅ Matched Keywords <span id="matchedKwLabel" style="color:var(--text-muted);font-weight:400"></span></h3>
+          <div class="kw-list" id="matchedKwList"></div>
+        </div>
+        <div class="kw-card">
+          <h3>❌ Missing Keywords <span id="missingKwLabel" style="color:var(--text-muted);font-weight:400"></span></h3>
+          <div class="kw-list" id="missingKwList"></div>
+        </div>
+      </div>
+
+      <div class="topics-card" id="topicsCard">
+        <h3>📋 Topic-Level Coverage</h3>
+        <div class="topics-grid">
+          <div class="topic-list">
+            <h4 class="covered">✅ Covered Topics</h4>
+            <div id="coveredTopics"></div>
+          </div>
+          <div class="topic-list">
+            <h4 class="missing">❌ Topics to Review</h4>
+            <div id="uncoveredTopics"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="preview-card" id="previewCard">
+        <h3>📷 Document Previews &amp; Extracted Text</h3>
+        <div class="preview-grid">
+          <div class="preview-item">
+            <h4>📄 Study Material PDF</h4>
+            <img id="pdfPreviewImg" src="" alt="PDF preview" style="display:none"/>
+            <div class="text-preview" id="pdfTextPreview"></div>
+          </div>
+          <div class="preview-item">
+            <h4>✍️ Handwritten Notes</h4>
+            <img id="notesPreviewImg" src="" alt="Notes preview" style="display:none"/>
+            <div class="text-preview" id="notesTextPreview"></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>
