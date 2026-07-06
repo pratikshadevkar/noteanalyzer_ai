@@ -1,10 +1,10 @@
-Flask==3.0.2
-Flask-CORS==4.0.0
-gunicorn==23.0.0
-PyMuPDF==1.24.14
-Pillow==11.3.0
-numpy==1.26.4
-wordfreq==3.1.1
-scikit-learn==1.4.1.post1
-pytesseract==0.3.13
-opencv-python-headless==4.10.0.84
+Flask
+Flask-CORS
+PyMuPDF
+Pillow
+numpy
+wordfreq
+scikit-learn
+gunicorn
+easyocr
+torch --index-url https://download.pytorch.org/rl/cpu
