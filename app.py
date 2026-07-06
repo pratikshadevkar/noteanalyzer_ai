@@ -7,7 +7,7 @@ import base64
 import io
 import re
 import numpy as np
-import easyocr
+
 import uuid
 from wordfreq import zipf_frequency
 from sklearn.metrics.pairwise import cosine_similarity
@@ -18,17 +18,12 @@ CORS(app)
 
 SESSION_CACHE = {}
 
-_reader_instance = None
+
 
 def get_sentence_model():
    
 
-def get_ocr_reader():
-    global _reader_instance
-    if _reader_instance is None:
-        print("🚀 [Lazy Load] Initializing EasyOCR Engine...")
-        _reader_instance = easyocr.Reader(['en'], gpu=False)
-    return _reader_instance
+
 
 def clean_text_completely(text):
     text = re.sub(r'—_+', ' ', text)
