@@ -7,7 +7,6 @@ import base64
 import io
 import re
 import numpy as np
-
 import uuid
 from wordfreq import zipf_frequency
 from sklearn.metrics.pairwise import cosine_similarity
@@ -17,13 +16,6 @@ app = Flask(__name__)
 CORS(app)
 
 SESSION_CACHE = {}
-
-
-
-def get_sentence_model():
-   
-
-
 
 def clean_text_completely(text):
     text = re.sub(r'—_+', ' ', text)
@@ -48,9 +40,9 @@ def pdf_to_images(pdf_bytes):
     images = []
     try:
         doc = fitz.open(stream=pdf_bytes, filetype="pdf")
-        for page_num in range(min(len(doc), 2)): # Reduced to 2 pages max for faster optimization
+        for page_num in range(min(len(doc), 2)): # Max 2 pages for optimization
             page = doc.load_page(page_num)
-            mat = fitz.Matrix(1.2, 1.2) # Dropped matrix sizing to 1.2 for major speedup
+            mat = fitz.Matrix(1.2, 1.2)
             pix = page.get_pixmap(matrix=mat)
             images.append(Image.open(io.BytesIO(pix.tobytes("png"))))
         doc.close()
@@ -59,11 +51,11 @@ def pdf_to_images(pdf_bytes):
     return images
 
 def extract_text_from_image(image):
+    # Fallback/placeholder text extraction to prevent NameError crashes
+    # If you install pytesseract, you can replace this with: pytesseract.image_to_string(image)
     try:
-        image_np = np.array(image)
-        result = get_ocr_reader().readtext(image_np)
-        text = " ".join([r[1] for r in result])
-        return text
+        print("OCR text extraction requested. (Install an OCR library if raw image processing is required)")
+        return ""
     except Exception as e:
         print(f"OCR reading error: {e}")
         return ""
@@ -91,7 +83,7 @@ def generate_preview_image(image, max_size=(250, 350)):
     img_copy = image.copy()
     img_copy.thumbnail(max_size, Image.Resampling.LANCZOS)
     buffer = io.BytesIO()
-    img_copy.save(buffer, format='JPEG', quality=60) # Fast quality setting
+    img_copy.save(buffer, format='JPEG', quality=60)
     return base64.b64encode(buffer.getvalue()).decode('utf-8')
 
 @app.route('/init_session', methods=['POST'])
@@ -114,9 +106,8 @@ def init_session():
             pdf_text_raw = " ".join([extract_text_from_image(img) for img in pdf_images]).strip()
 
         pdf_clean = clean_text_completely(pdf_text_raw)
-        pdf_word_count = len(pdf_clean.split()) # Calculated securely from cleaned data array
+        pdf_word_count = len(pdf_clean.split())
         
-       
         pdf_kw = extract_keywords(pdf_clean)
         pdf_sentences = [s.strip() for s in re.split(r'[.!?\n]+', pdf_text_raw) if len(s.strip()) > 15]
 
@@ -150,13 +141,12 @@ def analyze_notes():
             return jsonify({'error': 'Notes file is required'}), 400
 
         notes_file = request.files['notes']
-        extraction_mode = request.form.get('extractionMode', 'standard')
         deep_match = request.form.get('deepMatch', 'true') == 'true'
         
         cache = SESSION_CACHE[session_id]
         pdf_text_raw = cache['pdf_text_raw']
         pdf_clean = cache['pdf_clean']
-        pdf_word_count = cache['pdf_word_count'] # Pulled accurately from session state cache
+        pdf_word_count = cache['pdf_word_count']
         pdf_kw = cache['pdf_kw']
         pdf_sentences = cache['pdf_sentences']
         
@@ -178,20 +168,18 @@ def analyze_notes():
 
         notes_clean = clean_text_completely(notes_text_raw)
         results['notes_word_count'] = len(notes_clean.split())
-        results['pdf_word_count'] = pdf_word_count # Crucial: pass value back down so it is never undefined!
+        results['pdf_word_count'] = pdf_word_count
 
         if not pdf_clean or not notes_clean:
             return jsonify({'error': 'No readable text identified.'}), 400
         
         vectorizer = TfidfVectorizer()
-
         tfidf_matrix = vectorizer.fit_transform([pdf_clean, notes_clean])
 
         semantic_similarity = cosine_similarity(
           tfidf_matrix[0:1],
           tfidf_matrix[1:2]
         )[0][0] * 100
-       
 
         notes_kw = extract_keywords(notes_clean)
         matched_set = set(pdf_kw).intersection(set(notes_kw))
@@ -261,4 +249,4 @@ def home():
     return render_template("index.html")
 
 if __name__ == '__main__':
-    app.run(debug=True, use_reloader=False, host='0.0.0.0', port=5050)
+    app.run(debug=True, use_reloader=False, host='0.0.0.0', port=int(os.environ.get("PORT", 5050)))
